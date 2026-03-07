@@ -3,16 +3,16 @@
 # ============================================
 
 # Core
-numpy==1.26.4
+numpy>=1.26.4,<2.0.0
 python-dotenv
 
 # FastAPI & Server
-fastapi
-uvicorn
+fastapi>=0.100.0
+uvicorn[standard]
 
 # Pydantic
-pydantic==2.8.2
-pydantic-settings
+pydantic>=2.5.0,<3.0.0
+pydantic-settings>=2.0.0
 
 # LangChain (your working versions)
 langchain==0.2.16
