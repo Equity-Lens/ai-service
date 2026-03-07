@@ -9,14 +9,14 @@ uvicorn[standard]
 pydantic>=2.5.0,<3.0.0
 pydantic-settings>=2.0.0
 
-# LangChain
-langchain==0.2.16
-langchain-community==0.2.16
-langchain-core==0.2.38
-langchain-openai==0.1.23
-langchain-text-splitters==0.2.4
+# LangChain — all pinned to 0.3.x for consistency
+langchain==0.3.25
+langchain-community==0.3.24
+langchain-core==0.3.62
+langchain-openai==0.3.16
+langchain-text-splitters==0.3.8
 
-# Pinecone — pinned to avoid simsimd conflict on Python 3.11
+# Pinecone — compatible with langchain-core 0.3.x
 langchain-pinecone==0.2.0
 pinecone-client>=3.0.0,<4.0.0
 
