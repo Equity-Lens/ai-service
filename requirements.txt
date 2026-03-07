@@ -18,7 +18,7 @@ langchain-text-splitters==0.3.8
 
 # Pinecone — compatible with langchain-core 0.3.x
 langchain-pinecone==0.2.0
-pinecone-client>=3.0.0,<4.0.0
+pinecone-client>=5.0.0,<6.0.0
 
 # Database
 asyncpg
