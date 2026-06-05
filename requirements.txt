@@ -9,32 +9,14 @@ uvicorn[standard]
 pydantic>=2.5.0,<3.0.0
 pydantic-settings>=2.0.0
 
-# LangChain — all pinned to 0.3.x for consistency
-langchain==0.3.25
-langchain-community==0.3.24
-langchain-core==0.3.62
-langchain-openai==0.3.16
-langchain-text-splitters==0.3.8
-
-# Pinecone — compatible with langchain-core 0.3.x
-langchain-pinecone==0.2.0
-pinecone-client>=5.0.0,<6.0.0
-
-# Database
-asyncpg
-
-# Market Data
-yfinance
+# AI Agent framework — OpenAI Agents SDK drives the agent loop and connects to the
+# MCP tool server (ai-mcp-service) over streamable HTTP. Pulls in openai>=2 + httpx.
+# (The MCP client lives in agents.mcp, so fastmcp is NOT needed here.)
+openai-agents>=0.2.0
 
 # Authentication
 python-jose[cryptography]
 
-# HTTP Client
-httpx
-
-# XML parsing
-lxml
-
-# MongoDB
+# MongoDB — chat session history
 motor
 pymongo

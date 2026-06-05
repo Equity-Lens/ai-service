@@ -94,42 +94,25 @@ async def guest_chat(request: GuestChatRequest):
     - Conversation history passed from frontend
     - Limited tool access (no portfolio/personal data tools)
     """
-    from server import create_guest_agent
-    import asyncio
+    from server import run_agent
 
     try:
-        chat_history = []
-        for msg in request.conversation_history[-10:]:
-            if msg.role == "user":
-                from langchain_core.messages import HumanMessage
-                chat_history.append(HumanMessage(content=msg.content))
-            else:
-                from langchain_core.messages import AIMessage
-                chat_history.append(AIMessage(content=msg.content))
+        chat_history = [
+            {"role": msg.role, "content": msg.content}
+            for msg in request.conversation_history[-10:]
+        ]
 
-        agent_executor = create_guest_agent()
-
-        result = await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: agent_executor.invoke({
-                "input": request.message,
-                "chat_history": chat_history
-            })
+        result = await run_agent(
+            query=request.message,
+            chat_history=chat_history,
+            guest=True,
         )
-
-        answer = result.get("output", "I couldn't generate a response.")
-
-        tools_used = []
-        if "intermediate_steps" in result:
-            for step in result["intermediate_steps"]:
-                if len(step) >= 1 and hasattr(step[0], "tool"):
-                    tools_used.append(step[0].tool)
 
         return {
             "success": True,
             "data": {
-                "answer": answer,
-                "tools_used": list(set(tools_used))
+                "answer": result["answer"],
+                "tools_used": result["tools_used"]
             }
         }
 
@@ -244,8 +227,7 @@ async def delete_session(session_id: str, current_user: dict = Depends(get_curre
 @router.post("/{session_id}/chat")
 async def chat_in_session(session_id: str, request: ChatInSessionRequest, current_user: dict = Depends(get_current_user)):
     """Send a message in a chat session and get AI response."""
-    from server import create_agent
-    import asyncio
+    from server import run_agent
 
     user_id = current_user["userId"]
 
@@ -262,38 +244,22 @@ async def chat_in_session(session_id: str, request: ChatInSessionRequest, curren
         title = await ChatModel.generate_title(request.query)
         await ChatModel.update_title(session_id, title)
 
-    # Build chat history for context
-    chat_history = []
-    for msg in session.get("messages", [])[-10:]:
-        if msg["role"] == "user":
-            from langchain_core.messages import HumanMessage
-            chat_history.append(HumanMessage(content=msg["content"]))
-        else:
-            from langchain_core.messages import AIMessage
-            chat_history.append(AIMessage(content=msg["content"]))
+    # Build chat history for context (plain dicts; the agent converts them)
+    chat_history = [
+        {"role": msg["role"], "content": msg["content"]}
+        for msg in session.get("messages", [])[-10:]
+    ]
 
-    # Get AI response
-    agent_executor = create_agent(user_id)
-
-    result = await asyncio.get_event_loop().run_in_executor(
-        None,
-        lambda: agent_executor.invoke({
-            "input": request.query,
-            "chat_history": chat_history
-        })
+    # Get AI response from the MCP-backed agent
+    result = await run_agent(
+        query=request.query,
+        chat_history=chat_history,
+        user_id=user_id,
     )
-
-    answer = result.get("output", "I couldn't generate a response.")
+    answer = result["answer"]
 
     # Save assistant response
     await ChatModel.add_message(session_id, "assistant", answer)
-
-    # Get tools used
-    tools_used = []
-    if "intermediate_steps" in result:
-        for step in result["intermediate_steps"]:
-            if len(step) >= 1 and hasattr(step[0], "tool"):
-                tools_used.append(step[0].tool)
 
     return {
         "success": True,
@@ -301,6 +267,6 @@ async def chat_in_session(session_id: str, request: ChatInSessionRequest, curren
             "session_id": session_id,
             "query": request.query,
             "answer": answer,
-            "tools_used": list(set(tools_used))
+            "tools_used": result["tools_used"]
         }
     }
