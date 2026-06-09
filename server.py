@@ -1,5 +1,6 @@
-from fastapi import FastAPI, HTTPException, Depends, Header
+from fastapi import FastAPI, HTTPException, Depends, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional
 import json
@@ -31,6 +32,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Safety net: ensure ANY unhandled exception returns a JSON response. Exception
+# handlers run inside ExceptionMiddleware (below CORSMiddleware), so their
+# response flows back through CORS and keeps the Access-Control-* headers.
+# Without this, an unhandled error is caught by Starlette's outermost
+# ServerErrorMiddleware, which bypasses CORS and makes the browser report the
+# failure as a CORS error ("Response headers (0)").
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    detail = str(exc) if settings.DEBUG else "Internal server error."
+    return JSONResponse(status_code=500, content={"success": False, "detail": detail})
+
 
 @app.on_event("startup")
 async def startup():

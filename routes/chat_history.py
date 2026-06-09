@@ -228,45 +228,57 @@ async def delete_session(session_id: str, current_user: dict = Depends(get_curre
 async def chat_in_session(session_id: str, request: ChatInSessionRequest, current_user: dict = Depends(get_current_user)):
     """Send a message in a chat session and get AI response."""
     from server import run_agent
+    from config import settings
 
-    user_id = current_user["userId"]
+    try:
+        user_id = current_user["userId"]
 
-    # Verify session exists and belongs to this user
-    session = await ChatModel.get_session(session_id, user_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+        # Verify session exists and belongs to this user
+        session = await ChatModel.get_session(session_id, user_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
 
-    # Save user message
-    await ChatModel.add_message(session_id, "user", request.query)
+        # Save user message
+        await ChatModel.add_message(session_id, "user", request.query)
 
-    # Update title if first message
-    if len(session.get("messages", [])) == 0:
-        title = await ChatModel.generate_title(request.query)
-        await ChatModel.update_title(session_id, title)
+        # Update title if first message
+        if len(session.get("messages", [])) == 0:
+            title = await ChatModel.generate_title(request.query)
+            await ChatModel.update_title(session_id, title)
 
-    # Build chat history for context (plain dicts; the agent converts them)
-    chat_history = [
-        {"role": msg["role"], "content": msg["content"]}
-        for msg in session.get("messages", [])[-10:]
-    ]
+        # Build chat history for context (plain dicts; the agent converts them)
+        chat_history = [
+            {"role": msg["role"], "content": msg["content"]}
+            for msg in session.get("messages", [])[-10:]
+        ]
 
-    # Get AI response from the MCP-backed agent
-    result = await run_agent(
-        query=request.query,
-        chat_history=chat_history,
-        user_id=user_id,
-    )
-    answer = result["answer"]
+        # Get AI response from the MCP-backed agent
+        result = await run_agent(
+            query=request.query,
+            chat_history=chat_history,
+            user_id=user_id,
+        )
+        answer = result["answer"]
 
-    # Save assistant response
-    await ChatModel.add_message(session_id, "assistant", answer)
+        # Save assistant response
+        await ChatModel.add_message(session_id, "assistant", answer)
 
-    return {
-        "success": True,
-        "data": {
-            "session_id": session_id,
-            "query": request.query,
-            "answer": answer,
-            "tools_used": result["tools_used"]
+        return {
+            "success": True,
+            "data": {
+                "session_id": session_id,
+                "query": request.query,
+                "answer": answer,
+                "tools_used": result["tools_used"]
+            }
         }
-    }
+    except HTTPException:
+        # Pass through deliberate HTTP errors (e.g. 404 session not found) so they
+        # keep their status and still flow through the CORS middleware.
+        raise
+    except Exception as e:
+        # The upstream MCP/LLM dependency failed. Returning an HTTPException here
+        # (rather than letting the exception bubble to ServerErrorMiddleware) keeps
+        # the CORS headers on the response, so the browser shows the real error.
+        detail = str(e) if settings.DEBUG else "Failed to generate AI response. Please try again."
+        raise HTTPException(status_code=502, detail=detail)
