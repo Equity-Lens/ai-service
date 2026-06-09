@@ -1,0 +1,23 @@
+# Core
+python-dotenv
+
+# Settings
+pydantic>=2.5.0,<3.0.0
+pydantic-settings>=2.0.0
+
+# MCP server — exposes tools/* over streamable HTTP (bundles its own ASGI server)
+fastmcp>=2.0.0
+
+# OpenAI SDK — RAG embeddings (tools/research.py)
+openai>=2.0.0
+
+# Pinecone — RAG vector store
+pinecone-client>=5.0.0,<6.0.0
+
+# Database — portfolio/alerts
+asyncpg
+
+# Market data
+yfinance
+httpx
+lxml

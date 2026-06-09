@@ -20,3 +20,7 @@ python-jose[cryptography]
 # MongoDB — chat session history
 motor
 pymongo
+
+# Co-located MCP tool server (vendored under ./mcp). Installs fastmcp, pinecone,
+# asyncpg, yfinance, etc. so the MCP process can run in the same deployment.
+-r mcp/requirements.txt
